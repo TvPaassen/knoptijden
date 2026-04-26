@@ -253,7 +253,7 @@ let timers={},laps=[],names=[],syncInterval=null;
 function initials(n){return n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 function fmt(ms){const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h>0?h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 function esc(n){return CSS.escape(n);}
-function safe(n){return n.replace(/\/g,'\\').replace(/'/g,"\'")}
+function safe(n){return n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function sortedNames(){return [...names].sort((a,b)=>a.localeCompare(b,'nl'));}
 
