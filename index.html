@@ -542,6 +542,22 @@ async function initApp(){
 }
 
 if(tabletId){initApp();}else{showScreen('screen-setup');}
+
+// Expose functions to global scope (needed for onclick in HTML with type="module")
+window.selectTablet=selectTablet;
+window.showAdmin=showAdmin;
+window.doLogin=doLogin;
+window.doLogout=doLogout;
+window.showScreen=showScreen;
+window.switchTab=switchTab;
+window.addName=addName;
+window.removeName=removeName;
+window.saveNames=saveNames;
+window.exportCSV=exportCSV;
+window.clearAllLaps=clearAllLaps;
+window.resetTablet=resetTablet;
+window.startTimer=startTimer;
+window.stopTimer=stopTimer;
 </script>
 </body>
 </html>
