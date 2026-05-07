@@ -666,55 +666,41 @@ function selectTablet(id){
 }
 
 async function confirmTablet(){
-  const id=window._pendingTablet;
-  const pwd=document.getElementById('setup-pwd-input').value;
-  const err=document.getElementById('setup-pwd-err');
- 
-  if(pwd!==ADMIN_PWD){
-    err.textContent='Verkeerd wachtwoord. Probeer opnieuw.';
-    document.getElementById('setup-pwd-input').value='';
-    document.getElementById('setup-pwd-input').focus();
+  const id = window._pendingTablet;
+  const pwdInput = document.getElementById('setup-pwd-input');
+  const pwd = pwdInput.value.trim();
+  const err = document.getElementById('setup-pwd-err');
+
+  console.log('confirmTablet called with tablet:', id);
+
+  if (!id) {
+    err.textContent = 'Geen tablet gekozen.';
     return;
   }
- 
-  err.textContent='';
- 
-  // Controleer of dit slot al door een ander device is ingenomen
-  const deviceId=getDeviceId();
-  try{
-    const snap=await get(ref(db,'rl_tablets/'+id));
-    if(snap.exists() && snap.val()!==deviceId){
-      err.textContent='Tablet '+id+' is al aangemeld op een ander apparaat.';
-      return;
-    }
-    await set(ref(db,'rl_tablets/'+id), deviceId);
-  }catch(e){
-    // Offline: ga toch door
+  if (pwd !== TABLET_PWD) {
+    err.textContent = 'Verkeerd wachtwoord!';
+    pwdInput.value = '';
+    pwdInput.focus();
+    return;
   }
- 
-  tabletId=id;
-  timeLimitMs=TABLET_CONFIG[id].limitMin*60000;
-  localStorage.setItem('rl_tablet',id);
-  localStorage.setItem('rl_device_id',deviceId);
-  initApp();
-}
- 
-// Annuleer: ga terug naar de keuze
-function cancelTabletConfirm(){
-  window._pendingTablet=null;
-  document.getElementById('setup-confirm').style.display='none';
-  document.getElementById('setup-choice').style.display='block';
-}
 
-async function resetTablet(){
-  if(!confirm('Dit tablet wordt gereset. Je moet daarna opnieuw kiezen welke locatie het is.'))return;
-  // Verwijder registratie uit Firebase
-  try{
-    await set(ref(db,'rl_tablets/'+tabletId), null);
-  }catch(e){}
-  localStorage.removeItem('rl_tablet');
-  localStorage.removeItem('rl_device_id');
-  location.reload();
+  err.textContent = 'Activeren...';
+
+  const deviceId = getDeviceId();
+
+  try {
+    await set(ref(db, 'rl_tablets/' + id), deviceId);
+  } catch(e) {
+    console.warn('Firebase error (mogelijk offline):', e);
+  }
+
+  tabletId = id;
+  timeLimitMs = TABLET_CONFIG[id].limitMin * 60000;
+  localStorage.setItem('rl_tablet', id);
+  localStorage.setItem('rl_device_id', deviceId);
+
+  console.log('Tablet succesvol geactiveerd:', id);
+  initApp();
 }
 
 async function checkTabletRegistration(){
@@ -787,23 +773,25 @@ async function initApp(){
 
 checkTabletRegistration();
 
-// Expose functions to global scope (needed for onclick in HTML with type="module")
-window.selectTablet=selectTablet;
-window.confirmTablet = confirmTablet;           // ← toevoegen
-window.cancelTabletConfirm = cancelTabletConfirm; // ← toevoegen
-window.showAdmin=showAdmin;
-window.doLogin=doLogin;
-window.doLogout=doLogout;
-window.showScreen=showScreen;
-window.switchTab=switchTab;
-window.addName=addName;
-window.removeName=removeName;
-window.saveNames=saveNames;
-window.exportCSV=exportCSV;
-window.clearAllLaps=clearAllLaps;
-window.resetTablet=resetTablet;
-window.startTimer=startTimer;
-window.stopTimer=stopTimer;
+// === FUNCTIES GLOBAAL MAKEN ===
+window.selectTablet = selectTablet;
+window.confirmTablet = confirmTablet;
+window.cancelTabletConfirm = cancelTabletConfirm;
+window.showAdmin = showAdmin;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.showScreen = showScreen;
+window.switchTab = switchTab;
+window.addName = addName;
+window.removeName = removeName;
+window.saveNames = saveNames;
+window.exportCSV = exportCSV;
+window.clearAllLaps = clearAllLaps;
+window.resetTablet = resetTablet;
+window.startTimer = startTimer;
+window.stopTimer = stopTimer;
+
+console.log('✅ Alle functies geëxposeerd voor onclick');
 </script>
 </body>
 </html>
