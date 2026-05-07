@@ -654,20 +654,15 @@ function exportCSV(){
 }
 
 function selectTablet(id){
-  // Sla de keuze tijdelijk op en toon het wachtwoordscherm
   document.getElementById('setup-choice').style.display='none';
   document.getElementById('setup-confirm').style.display='block';
-  document.getElementById('setup-confirm-label').textContent=
+  document.getElementById('setup-confirm-label').textContent = 
     'Tablet '+id+' — '+TABLET_CONFIG[id].label;
   document.getElementById('setup-pwd-input').value='';
   document.getElementById('setup-pwd-err').textContent='';
   document.getElementById('setup-pwd-input').focus();
-  // Sla de keuze op als tijdelijke variabele op het window-object
-  window._pendingTablet=id;
+  window._pendingTablet = id;
 }
-
-// ==================== BELANGRIJKE FUNCTIES ====================
-// ==================== CORE FUNCTIES (laatste versie) ====================
 
 async function confirmTablet(){
   const id = window._pendingTablet;
@@ -694,7 +689,7 @@ async function confirmTablet(){
   try {
     await set(ref(db, 'rl_tablets/' + id), deviceId);
   } catch(e) {
-    console.warn('Firebase error (offline is ok):', e);
+    console.warn('Firebase error (offline ok):', e);
   }
 
   tabletId = id;
@@ -703,7 +698,7 @@ async function confirmTablet(){
   localStorage.setItem('rl_device_id', deviceId);
 
   console.log('🎉 Tablet succesvol geactiveerd:', id);
-  initApp();   // Dit moet nu werken
+  initApp();
 }
 
 function cancelTabletConfirm(){
@@ -712,7 +707,7 @@ function cancelTabletConfirm(){
   document.getElementById('setup-choice').style.display = 'block';
 }
 
-// ==================== ALLE WINDOW EXPOSES (belangrijk!) ====================
+// ==================== ALLE FUNCTIES GLOBAAL MAKEN ====================
 window.selectTablet = selectTablet;
 window.confirmTablet = confirmTablet;
 window.cancelTabletConfirm = cancelTabletConfirm;
@@ -731,8 +726,7 @@ window.startTimer = startTimer;
 window.stopTimer = stopTimer;
 window.initApp = initApp;
 
-console.log('✅ Alle kritieke functies geëxposeerd voor module');
-  
+console.log('✅ Alle functies succesvol geëxposeerd!');
 </script>
 </body>
 </html>
