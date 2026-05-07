@@ -707,26 +707,6 @@ function cancelTabletConfirm(){
   document.getElementById('setup-choice').style.display = 'block';
 }
 
-// ==================== ALLE FUNCTIES GLOBAAL MAKEN ====================
-window.selectTablet = selectTablet;
-window.confirmTablet = confirmTablet;
-window.cancelTabletConfirm = cancelTabletConfirm;
-window.showAdmin = showAdmin;
-window.doLogin = doLogin;
-window.doLogout = doLogout;
-window.showScreen = showScreen;
-window.switchTab = switchTab;
-window.addName = addName;
-window.removeName = removeName;
-window.saveNames = saveNames;
-window.exportCSV = exportCSV;
-window.clearAllLaps = clearAllLaps;
-window.resetTablet = resetTablet;
-window.startTimer = startTimer;
-window.stopTimer = stopTimer;
-window.initApp = initApp;
-
-console.log('✅ Alle functies succesvol geëxposeerd!');
 
 async function initApp(){
   await loadFromStorage();
@@ -748,6 +728,25 @@ function resetTablet(){
   tabletId=null;
   showScreen('screen-setup');
 }
+
+// ==================== ALLE FUNCTIES GLOBAAL MAKEN ====================
+window.selectTablet = selectTablet;
+window.confirmTablet = confirmTablet;
+window.cancelTabletConfirm = cancelTabletConfirm;
+window.showAdmin = showAdmin;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.showScreen = showScreen;
+window.switchTab = switchTab;
+window.addName = addName;
+window.removeName = removeName;
+window.saveNames = saveNames;
+window.exportCSV = exportCSV;
+window.clearAllLaps = clearAllLaps;
+window.resetTablet = resetTablet;
+window.startTimer = startTimer;
+window.stopTimer = stopTimer;
+window.initApp = initApp;
 
 console.log('✅ Alle functies succesvol geëxposeerd!');
 
