@@ -269,6 +269,14 @@ let timers={},laps=[],names=[];
 
 function initials(n){return n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 function fmt(ms){const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h>0?h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'):String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function getDeviceId(){
+  let id=localStorage.getItem('rl_device_id');
+  if(!id){
+    id='dev-'+Math.random().toString(36).slice(2)+'-'+Date.now();
+    localStorage.setItem('rl_device_id',id);
+  }
+  return id;
+}
 function esc(n){return CSS.escape(n);}
 function safe(n){return n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
@@ -600,9 +608,94 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
-function selectTablet(id){tabletId=id;timeLimitMs=TABLET_CONFIG[id].limitMin*60000;localStorage.setItem('rl_tablet',id);initApp();}
-function resetTablet(){if(!confirm('Dit tablet wordt gereset. Je moet daarna opnieuw kiezen welke locatie het is.'))return;localStorage.removeItem('rl_tablet');location.reload();}
-
+async function selectTablet(id){
+  // Controleer of dit slot al door een ander device is ingenomen
+  const deviceId=getDeviceId();
+  try{
+    const snap=await get(ref(db,'rl_tablets/'+id));
+    if(snap.exists() && snap.val()!==deviceId){
+      alert('Tablet '+id+' is al aangemeld op een ander apparaat.\nKies een ander tablet of vraag de beheerder om te resetten.');
+      return;
+    }
+    // Registreer dit device voor dit tablet-slot
+    await set(ref(db,'rl_tablets/'+id), deviceId);
+  }catch(e){
+    // Offline: ga toch door met lokale opslag
+  }
+  tabletId=id;
+  timeLimitMs=TABLET_CONFIG[id].limitMin*60000;
+  localStorage.setItem('rl_tablet',id);
+  localStorage.setItem('rl_device_id',deviceId);
+  initApp();
+}
+ 
+async function resetTablet(){
+  if(!confirm('Dit tablet wordt gereset. Je moet daarna opnieuw kiezen welke locatie het is.'))return;
+  // Verwijder registratie uit Firebase
+  try{
+    await set(ref(db,'rl_tablets/'+tabletId), null);
+  }catch(e){}
+  localStorage.removeItem('rl_tablet');
+  localStorage.removeItem('rl_device_id');
+  location.reload();
+}
+async function checkTabletRegistration(){
+  const deviceId=getDeviceId();
+ 
+  // Controleer of dit device al geregistreerd staat voor een tablet
+  const myTablet=localStorage.getItem('rl_tablet');
+  if(myTablet){
+    // Verifieer ook in Firebase (beschermt tegen localStorage-wissing)
+    try{
+      const snap=await get(ref(db,'rl_tablets/'+myTablet));
+      if(snap.exists() && snap.val()===deviceId){
+        tabletId=myTablet;
+        timeLimitMs=TABLET_CONFIG[myTablet].limitMin*60000;
+        initApp();
+        return;
+      }
+    }catch(e){
+      // Offline: vertrouw localStorage
+      tabletId=myTablet;
+      timeLimitMs=TABLET_CONFIG[myTablet].limitMin*60000;
+      initApp();
+      return;
+    }
+  }
+ 
+  // Dit device is nog niet geregistreerd — check hoeveel slots bezet zijn
+  try{
+    const snap=await get(ref(db,'rl_tablets'));
+    const registered=snap.exists()?snap.val():{};
+    const takenSlots=Object.keys(registered).filter(k=>registered[k]!==null);
+ 
+    if(takenSlots.length>=3){
+      // Alle 3 tablets zijn aangemeld — toon alleen admin-login
+      showScreen('screen-setup');
+      document.getElementById('setup-choice').style.display='none';
+      document.getElementById('setup-locked').style.display='block';
+      return;
+    }
+ 
+    // Geef beschikbare opties weer (grijze knoppen voor bezette slots)
+    showScreen('screen-setup');
+    ['A','B','C'].forEach(id=>{
+      const btn=document.getElementById('setup-btn-'+id);
+      if(!btn)return;
+      if(registered[id]){
+        btn.disabled=true;
+        btn.style.opacity='0.4';
+        btn.style.cursor='not-allowed';
+        btn.querySelector('strong').textContent+=' — al aangemeld';
+      }
+    });
+ 
+  }catch(e){
+    // Offline: toon gewoon de setup
+    showScreen('screen-setup');
+  }
+}
+ 
 async function initApp(){
   showScreen('screen-timer');
   const cfg=TABLET_CONFIG[tabletId];
@@ -614,7 +707,7 @@ async function initApp(){
   startFirebaseListeners();
 }
 
-if(tabletId){initApp();}else{showScreen('screen-setup');}
+checkTabletRegistration();
 
 // Expose functions to global scope (needed for onclick in HTML with type="module")
 window.selectTablet=selectTablet;
