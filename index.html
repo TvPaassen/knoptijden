@@ -299,7 +299,6 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
-const TABLET_PWD='admin123';
 const ADMIN_PWD='admin123';
 const TABLET_CONFIG={
   A:{label:'Knoptijden Nieuwedijk Oost',limitMin:60},
@@ -671,7 +670,7 @@ async function confirmTablet(){
   const pwd=document.getElementById('setup-pwd-input').value;
   const err=document.getElementById('setup-pwd-err');
  
-  if(pwd!==TABLET_PWD){
+  if(pwd!==ADMIN_PWD){
     err.textContent='Verkeerd wachtwoord. Probeer opnieuw.';
     document.getElementById('setup-pwd-input').value='';
     document.getElementById('setup-pwd-input').focus();
