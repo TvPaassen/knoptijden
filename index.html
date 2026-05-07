@@ -723,14 +723,10 @@ document.getElementById('setup-choice-step').style.display = 'none';
 }
  
 async function initApp(){
-  showScreen('screen-timer');
-  const cfg=TABLET_CONFIG[tabletId];
-  document.getElementById('timer-title').textContent=cfg.label;
-  document.getElementById('timer-sub').textContent='Tijdslimiet: '+cfg.limitMin+' minuten · '+new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
-  await loadFromStorage();
-  if(!names.length)names=['Medewerker 1','Medewerker 2','Medewerker 3'];
-  initTimers();renderPersons();renderLaps();
-  startFirebaseListeners();
+showScreen('screen-setup');
+document.getElementById('setup-login-step').style.display = 'block';
+document.getElementById('setup-choice-step').style.display = 'none';
+['A','B','C'].forEach(id=>{
 }
 
 checkTabletRegistration();
