@@ -669,19 +669,21 @@ function selectTablet(id){
 async function confirmTablet(){
   const id = window._pendingTablet;
   const pwdInput = document.getElementById('setup-pwd-input');
-  const pwd = pwdInput.value.trim();
+  const pwd = pwdInput ? pwdInput.value.trim() : '';
   const err = document.getElementById('setup-pwd-err');
 
-  console.log('confirmTablet called with tablet:', id);
+  console.log('confirmTablet called - Tablet:', id);
 
   if (!id) {
-    err.textContent = 'Geen tablet gekozen.';
+    err.textContent = 'Geen tablet geselecteerd.';
     return;
   }
-  if (pwd !== TABLET_PWD) {
-    err.textContent = 'Verkeerd wachtwoord!';
-    pwdInput.value = '';
-    pwdInput.focus();
+  if (pwd !== window.TABLET_PWD) {
+    err.textContent = 'Verkeerd wachtwoord! (admin123)';
+    if (pwdInput) {
+      pwdInput.value = '';
+      pwdInput.focus();
+    }
     return;
   }
 
@@ -691,16 +693,17 @@ async function confirmTablet(){
 
   try {
     await set(ref(db, 'rl_tablets/' + id), deviceId);
+    console.log('✅ Tablet registratie gelukt');
   } catch(e) {
-    console.warn('Firebase error (mogelijk offline):', e);
+    console.warn('Firebase registratie mislukt (offline ok):', e);
   }
 
   tabletId = id;
-  timeLimitMs = TABLET_CONFIG[id].limitMin * 60000;
+  timeLimitMs = window.TABLET_CONFIG[id].limitMin * 60000;
   localStorage.setItem('rl_tablet', id);
   localStorage.setItem('rl_device_id', deviceId);
 
-  console.log('Tablet succesvol geactiveerd:', id);
+  console.log('🎉 Tablet succesvol geactiveerd:', id);
   initApp();
 }
 
@@ -774,7 +777,7 @@ async function initApp(){
 
 checkTabletRegistration();
 
-// === FUNCTIES GLOBAAL MAKEN ===
+// === ALLES GLOBAAL MAKEN VOOR ONCLICK & MODULE SCOPE ===
 window.selectTablet = selectTablet;
 window.confirmTablet = confirmTablet;
 window.cancelTabletConfirm = cancelTabletConfirm;
@@ -792,7 +795,12 @@ window.resetTablet = resetTablet;
 window.startTimer = startTimer;
 window.stopTimer = stopTimer;
 
-console.log('✅ Alle functies geëxposeerd voor onclick');
+// Constants ook globaal maken (belangrijk!)
+window.TABLET_PWD = TABLET_PWD;
+window.TABLET_CONFIG = TABLET_CONFIG;
+window.ADMIN_PWD = ADMIN_PWD;
+
+console.log('✅ Alle functies en constants geëxposeerd');
 </script>
 </body>
 </html>
