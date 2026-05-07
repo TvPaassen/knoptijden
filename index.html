@@ -727,6 +727,37 @@ window.stopTimer = stopTimer;
 window.initApp = initApp;
 
 console.log('✅ Alle functies succesvol geëxposeerd!');
+
+async function initApp(){
+  await loadFromStorage();
+  const cfg=TABLET_CONFIG[tabletId];
+  document.getElementById('timer-title').textContent='Knoptijden — '+cfg.label;
+  document.getElementById('timer-sub').textContent='Tijdslimiet: '+cfg.limitMin+' minuten per ronde';
+  renderPersons();
+  renderLaps();
+  startFirebaseListeners();
+  showScreen('screen-timer');
+}
+
+function resetTablet(){
+  if(!confirm('Dit tablet resetten? Je moet daarna opnieuw een locatie kiezen.'))return;
+  localStorage.removeItem('rl_tablet');
+  localStorage.removeItem('rl_running_timers');
+  Object.values(timers).forEach(t=>{clearInterval(t.interval);});
+  timers={};
+  tabletId=null;
+  showScreen('screen-setup');
+}
+
+console.log('✅ Alle functies succesvol geëxposeerd!');
+
+// Opstarten
+if(tabletId){
+  initApp();
+}else{
+  showScreen('screen-setup');
+}
+  
 </script>
 </body>
 </html>
