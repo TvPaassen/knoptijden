@@ -666,24 +666,23 @@ function selectTablet(id){
   window._pendingTablet=id;
 }
 
+// ==================== CONFIRMTABLET FUNCTIE ====================
 async function confirmTablet(){
   const id = window._pendingTablet;
   const pwdInput = document.getElementById('setup-pwd-input');
   const pwd = pwdInput ? pwdInput.value.trim() : '';
   const err = document.getElementById('setup-pwd-err');
 
-  console.log('confirmTablet called - Tablet:', id);
+  console.log('confirmTablet called - Tablet:', id, 'Password:', pwd ? '[ingevuld]' : '[leeg]');
 
   if (!id) {
     err.textContent = 'Geen tablet geselecteerd.';
     return;
   }
-  if (pwd !== window.TABLET_PWD) {
-    err.textContent = 'Verkeerd wachtwoord! (admin123)';
-    if (pwdInput) {
-      pwdInput.value = '';
-      pwdInput.focus();
-    }
+  if (pwd !== 'admin123') {                    // direct check i.p.v. constante
+    err.textContent = 'Verkeerd wachtwoord! Probeer: admin123';
+    if (pwdInput) pwdInput.value = '';
+    pwdInput.focus();
     return;
   }
 
@@ -693,13 +692,12 @@ async function confirmTablet(){
 
   try {
     await set(ref(db, 'rl_tablets/' + id), deviceId);
-    console.log('✅ Tablet registratie gelukt');
   } catch(e) {
-    console.warn('Firebase registratie mislukt (offline ok):', e);
+    console.warn('Firebase error (offline is ok):', e);
   }
 
   tabletId = id;
-  timeLimitMs = window.TABLET_CONFIG[id].limitMin * 60000;
+  timeLimitMs = (id === 'C' ? 70 : 60) * 60000;   // direct berekenen
   localStorage.setItem('rl_tablet', id);
   localStorage.setItem('rl_device_id', deviceId);
 
@@ -707,77 +705,13 @@ async function confirmTablet(){
   initApp();
 }
 
-async function checkTabletRegistration(){
-  const deviceId=getDeviceId();
- 
-  // Controleer of dit device al geregistreerd staat voor een tablet
-  const myTablet=localStorage.getItem('rl_tablet');
-  if(myTablet){
-    // Verifieer ook in Firebase (beschermt tegen localStorage-wissing)
-    try{
-      const snap=await get(ref(db,'rl_tablets/'+myTablet));
-      if(snap.exists() && snap.val()===deviceId){
-        tabletId=myTablet;
-        timeLimitMs=TABLET_CONFIG[myTablet].limitMin*60000;
-        initApp();
-        return;
-      }
-    }catch(e){
-      // Offline: vertrouw localStorage
-      tabletId=myTablet;
-      timeLimitMs=TABLET_CONFIG[myTablet].limitMin*60000;
-      initApp();
-      return;
-    }
-  }
- 
-  // Dit device is nog niet geregistreerd — check hoeveel slots bezet zijn
-  try{
-    const snap=await get(ref(db,'rl_tablets'));
-    const registered=snap.exists()?snap.val():{};
-    const takenSlots=Object.keys(registered).filter(k=>registered[k]!==null);
- 
-    if(takenSlots.length>=3){
-      // Alle 3 tablets zijn aangemeld — toon alleen admin-login
-      showScreen('screen-setup');
-      document.getElementById('setup-choice').style.display='none';
-      document.getElementById('setup-locked').style.display='block';
-      return;
-    }
- 
-    // Geef beschikbare opties weer (grijze knoppen voor bezette slots)
-    showScreen('screen-setup');
-    ['A','B','C'].forEach(id=>{
-      const btn=document.getElementById('setup-btn-'+id);
-      if(!btn)return;
-      if(registered[id]){
-        btn.disabled=true;
-        btn.style.opacity='0.4';
-        btn.style.cursor='not-allowed';
-        btn.querySelector('strong').textContent+=' — al aangemeld';
-      }
-    });
- 
-  }catch(e){
-    // Offline: toon gewoon de setup
-    showScreen('screen-setup');
-  }
+function cancelTabletConfirm(){
+  window._pendingTablet = null;
+  document.getElementById('setup-confirm').style.display = 'none';
+  document.getElementById('setup-choice').style.display = 'block';
 }
 
-async function initApp(){
-  showScreen('screen-timer');
-  const cfg=TABLET_CONFIG[tabletId];
-  document.getElementById('timer-title').textContent=cfg.label;
-  document.getElementById('timer-sub').textContent='Tijdslimiet: '+cfg.limitMin+' minuten · '+new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
-  await loadFromStorage();
-  if(!names.length)names=['Medewerker 1','Medewerker 2','Medewerker 3'];
-  initTimers();renderPersons();renderLaps();
-  startFirebaseListeners();
-}
-
-checkTabletRegistration();
-
-// === ALLES GLOBAAL MAKEN VOOR ONCLICK & MODULE SCOPE ===
+// ==================== GLOBAAL EXPOSEN ====================
 window.selectTablet = selectTablet;
 window.confirmTablet = confirmTablet;
 window.cancelTabletConfirm = cancelTabletConfirm;
@@ -795,12 +729,8 @@ window.resetTablet = resetTablet;
 window.startTimer = startTimer;
 window.stopTimer = stopTimer;
 
-// Constants ook globaal maken (belangrijk!)
-window.TABLET_PWD = TABLET_PWD;
-window.TABLET_CONFIG = TABLET_CONFIG;
-window.ADMIN_PWD = ADMIN_PWD;
-
-console.log('✅ Alle functies en constants geëxposeerd');
+console.log('✅ Alle functies correct geëxposeerd voor module');
+  
 </script>
 </body>
 </html>
