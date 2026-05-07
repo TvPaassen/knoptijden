@@ -666,23 +666,26 @@ function selectTablet(id){
   window._pendingTablet=id;
 }
 
-// ==================== CONFIRMTABLET FUNCTIE ====================
+// ==================== BELANGRIJKE FUNCTIES ====================
+
 async function confirmTablet(){
   const id = window._pendingTablet;
   const pwdInput = document.getElementById('setup-pwd-input');
   const pwd = pwdInput ? pwdInput.value.trim() : '';
   const err = document.getElementById('setup-pwd-err');
 
-  console.log('confirmTablet called - Tablet:', id, 'Password:', pwd ? '[ingevuld]' : '[leeg]');
+  console.log('confirmTablet called - Tablet:', id);
 
   if (!id) {
     err.textContent = 'Geen tablet geselecteerd.';
     return;
   }
-  if (pwd !== 'admin123') {                    // direct check i.p.v. constante
+  if (pwd !== 'admin123') {
     err.textContent = 'Verkeerd wachtwoord! Probeer: admin123';
-    if (pwdInput) pwdInput.value = '';
-    pwdInput.focus();
+    if (pwdInput) {
+      pwdInput.value = '';
+      pwdInput.focus();
+    }
     return;
   }
 
@@ -693,11 +696,11 @@ async function confirmTablet(){
   try {
     await set(ref(db, 'rl_tablets/' + id), deviceId);
   } catch(e) {
-    console.warn('Firebase error (offline is ok):', e);
+    console.warn('Firebase error (offline ok):', e);
   }
 
   tabletId = id;
-  timeLimitMs = (id === 'C' ? 70 : 60) * 60000;   // direct berekenen
+  timeLimitMs = (id === 'C' ? 70 : 60) * 60000;
   localStorage.setItem('rl_tablet', id);
   localStorage.setItem('rl_device_id', deviceId);
 
@@ -711,7 +714,7 @@ function cancelTabletConfirm(){
   document.getElementById('setup-choice').style.display = 'block';
 }
 
-// ==================== GLOBAAL EXPOSEN ====================
+// ==================== ALLE FUNCTIES GLOBAAL MAKEN ====================
 window.selectTablet = selectTablet;
 window.confirmTablet = confirmTablet;
 window.cancelTabletConfirm = cancelTabletConfirm;
@@ -728,8 +731,9 @@ window.clearAllLaps = clearAllLaps;
 window.resetTablet = resetTablet;
 window.startTimer = startTimer;
 window.stopTimer = stopTimer;
+window.initApp = initApp;           // ← belangrijk!
 
-console.log('✅ Alle functies correct geëxposeerd voor module');
+console.log('✅ Alle functies geëxposeerd!');
   
 </script>
 </body>
