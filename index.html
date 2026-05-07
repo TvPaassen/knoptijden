@@ -329,33 +329,53 @@ function startFirebaseListeners(){
     }
     setSynced(true);
   }, ()=>setSynced(false));
-
+ 
   onValue(ref(db,'rl_laps'), (snap)=>{
     if(snap.exists()){
       const l=snap.val();
       if(JSON.stringify(l)!==JSON.stringify(laps)){laps=l;renderLaps();}
     }
   });
+
+    // NIEUW: luister naar lopende timers op andere apparaten
+  onValue(ref(db,'rl_running'), (snap)=>{
+    const running=snap.exists()?snap.val():{};
+ 
+    names.forEach(name=>{
+      const key=name.replace(/[.#$\[\]]/g,'_');
+      const startTime=running[key];
+ 
+      if(startTime && timers[name] && !timers[name].running){
+        // Een ander apparaat heeft deze timer gestart — hier ook starten
+        timers[name].startTime=startTime;
+        timers[name].elapsed=Date.now()-startTime;
+        timers[name].running=true;
+        clearInterval(timers[name].interval);
+        timers[name].interval=setInterval(()=>{
+          timers[name].elapsed=Date.now()-startTime;
+          const el=document.getElementById('disp-'+esc(name));
+          if(el)el.textContent=fmt(timers[name].elapsed);
+          updateRowStatus(name);
+        },200);
+        updateRowStatus(name);renderBtns(name);
+      } else if(!startTime && timers[name] && timers[name].running){
+        // Een ander apparaat heeft de timer gestopt — hier ook stoppen (zonder lap opslaan)
+        clearInterval(timers[name].interval);
+        timers[name].running=false;
+        timers[name].elapsed=0;
+        timers[name].startTime=null;
+        const el=document.getElementById('disp-'+esc(name));
+        if(el)el.textContent='00:00';
+        updateRowStatus(name);renderBtns(name);
+      }
+    });
+  });
 }
 
 function initTimers(){
-  const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
   names.forEach(n=>{
     if(!timers[n]){
-      const st=saved[n];
-      if(st){
-        // Timer liep nog voor de page refresh — herstel de verstreken tijd
-        const elapsed=Date.now()-st;
-        timers[n]={running:false,startTime:st,elapsed,interval:null};
-      } else {
-        timers[n]={running:false,startTime:null,elapsed:0,interval:null};
-      }
-    }
-  });
-  // Herstart alle timers die vóór de refresh al liepen
-  Object.keys(saved).forEach(n=>{
-    if(timers[n] && names.includes(n)){
-      startTimer(n);
+      timers[n]={running:false,startTime:null,elapsed:0,interval:null};
     }
   });
 }
@@ -392,14 +412,19 @@ function renderBtns(name){
     :`<button class="btn-start-row" onclick="startTimer('${s}')">Start</button>`;
 }
 
-function startTimer(name){
+async function startTimer(name){
   if(!timers[name])timers[name]={running:false,startTime:null,elapsed:0,interval:null};
   const t=timers[name];if(t.running)return;
   t.startTime=Date.now()-t.elapsed;t.running=true;
-  // Sla de startTime op zodat een page refresh de timer niet reset
+ 
+  // Sla startTime op in Firebase én localStorage zodat alle apparaten het zien
   const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
   saved[name]=t.startTime;
   localStorage.setItem('rl_running_timers',JSON.stringify(saved));
+  try{
+    await set(ref(db,'rl_running/'+name.replace(/[.#$\[\]]/g,'_')), t.startTime);
+  }catch(e){}
+ 
   t.interval=setInterval(()=>{
     t.elapsed=Date.now()-t.startTime;
     const el=document.getElementById('disp-'+esc(name));if(el)el.textContent=fmt(t.elapsed);
@@ -412,10 +437,15 @@ async function stopTimer(name){
   const t=timers[name];if(!t||!t.running)return;
   clearInterval(t.interval);t.running=false;
   t.elapsed=Date.now()-t.startTime;
-  // Verwijder uit de persistente lijst nu de timer gestopt is
+ 
+  // Verwijder uit Firebase én localStorage
   const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
   delete saved[name];
   localStorage.setItem('rl_running_timers',JSON.stringify(saved));
+  try{
+    await set(ref(db,'rl_running/'+name.replace(/[.#$\[\]]/g,'_')), null);
+  }catch(e){}
+ 
   const now=new Date(),cfg=TABLET_CONFIG[tabletId];
   laps.unshift({name,ms:t.elapsed,time:fmt(t.elapsed),
     date:now.toLocaleDateString('nl-NL'),
