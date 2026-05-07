@@ -789,6 +789,8 @@ checkTabletRegistration();
 
 // Expose functions to global scope (needed for onclick in HTML with type="module")
 window.selectTablet=selectTablet;
+window.confirmTablet = confirmTablet;           // ← toevoegen
+window.cancelTabletConfirm = cancelTabletConfirm; // ← toevoegen
 window.showAdmin=showAdmin;
 window.doLogin=doLogin;
 window.doLogout=doLogout;
