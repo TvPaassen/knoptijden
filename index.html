@@ -336,34 +336,37 @@ function startFirebaseListeners(){
       if(JSON.stringify(l)!==JSON.stringify(laps)){laps=l;renderLaps();}
     }
   });
-
-    // NIEUW: luister naar lopende timers op andere apparaten
+ 
+  // Luister naar lopende timers op alle apparaten
   onValue(ref(db,'rl_running'), (snap)=>{
     const running=snap.exists()?snap.val():{};
  
     names.forEach(name=>{
       const key=name.replace(/[.#$\[\]]/g,'_');
-      const startTime=running[key];
+      const entry=running[key]; // {startTime, tablet} of null
  
-      if(startTime && timers[name] && !timers[name].running){
-        // Een ander apparaat heeft deze timer gestart — hier ook starten
-        timers[name].startTime=startTime;
-        timers[name].elapsed=Date.now()-startTime;
+      if(entry && timers[name] && !timers[name].running){
+        // Timer gestart op een ander apparaat — hier ook tonen
+        timers[name].startTime=entry.startTime;
+        timers[name].elapsed=Date.now()-entry.startTime;
         timers[name].running=true;
+        timers[name].ownerTablet=entry.tablet;
         clearInterval(timers[name].interval);
         timers[name].interval=setInterval(()=>{
-          timers[name].elapsed=Date.now()-startTime;
+          timers[name].elapsed=Date.now()-entry.startTime;
           const el=document.getElementById('disp-'+esc(name));
           if(el)el.textContent=fmt(timers[name].elapsed);
           updateRowStatus(name);
         },200);
         updateRowStatus(name);renderBtns(name);
-      } else if(!startTime && timers[name] && timers[name].running){
-        // Een ander apparaat heeft de timer gestopt — hier ook stoppen (zonder lap opslaan)
+ 
+      } else if(!entry && timers[name] && timers[name].running && timers[name].ownerTablet!==tabletId){
+        // Timer gestopt op het tablet dat hem startte — hier weergave resetten
         clearInterval(timers[name].interval);
         timers[name].running=false;
         timers[name].elapsed=0;
         timers[name].startTime=null;
+        timers[name].ownerTablet=null;
         const el=document.getElementById('disp-'+esc(name));
         if(el)el.textContent='00:00';
         updateRowStatus(name);renderBtns(name);
@@ -375,7 +378,7 @@ function startFirebaseListeners(){
 function initTimers(){
   names.forEach(n=>{
     if(!timers[n]){
-      timers[n]={running:false,startTime:null,elapsed:0,interval:null};
+      timers[n]={running:false,startTime:null,elapsed:0,interval:null,ownerTablet:null};
     }
   });
 }
@@ -413,16 +416,18 @@ function renderBtns(name){
 }
 
 async function startTimer(name){
-  if(!timers[name])timers[name]={running:false,startTime:null,elapsed:0,interval:null};
+  if(!timers[name])timers[name]={running:false,startTime:null,elapsed:0,interval:null,ownerTablet:null};
   const t=timers[name];if(t.running)return;
-  t.startTime=Date.now()-t.elapsed;t.running=true;
+  t.startTime=Date.now()-t.elapsed;
+  t.running=true;
+  t.ownerTablet=tabletId;
  
-  // Sla startTime op in Firebase én localStorage zodat alle apparaten het zien
+  // Sla startTime én ownerTablet op in Firebase én localStorage
   const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
-  saved[name]=t.startTime;
+  saved[name]={startTime:t.startTime,tablet:tabletId};
   localStorage.setItem('rl_running_timers',JSON.stringify(saved));
   try{
-    await set(ref(db,'rl_running/'+name.replace(/[.#$\[\]]/g,'_')), t.startTime);
+    await set(ref(db,'rl_running/'+name.replace(/[.#$\[\]]/g,'_')), {startTime:t.startTime,tablet:tabletId});
   }catch(e){}
  
   t.interval=setInterval(()=>{
@@ -435,8 +440,18 @@ async function startTimer(name){
 
 async function stopTimer(name){
   const t=timers[name];if(!t||!t.running)return;
+ 
+  // Controleer of deze timer op dit tablet is gestart
+  if(t.ownerTablet && t.ownerTablet!==tabletId){
+    const cfg=TABLET_CONFIG[t.ownerTablet];
+    const locatie=cfg?cfg.label:'Tablet '+t.ownerTablet;
+    alert(`⚠️ Deze timer is gestart op ${locatie}.\nStop de timer op dat tablet.`);
+    return;
+  }
+ 
   clearInterval(t.interval);t.running=false;
   t.elapsed=Date.now()-t.startTime;
+  t.ownerTablet=null;
  
   // Verwijder uit Firebase én localStorage
   const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
