@@ -338,7 +338,28 @@ function startFirebaseListeners(){
   });
 }
 
-function initTimers(){names.forEach(n=>{if(!timers[n])timers[n]={running:false,startTime:null,elapsed:0,interval:null};});}
+function initTimers(){
+  const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
+  names.forEach(n=>{
+    if(!timers[n]){
+      const st=saved[n];
+      if(st){
+        // Timer liep nog voor de page refresh — herstel de verstreken tijd
+        const elapsed=Date.now()-st;
+        timers[n]={running:false,startTime:st,elapsed,interval:null};
+      } else {
+        timers[n]={running:false,startTime:null,elapsed:0,interval:null};
+      }
+    }
+  });
+  // Herstart alle timers die vóór de refresh al liepen
+  Object.keys(saved).forEach(n=>{
+    if(timers[n] && names.includes(n)){
+      startTimer(n);
+    }
+  });
+}
+
 function rowStatus(e,r){if(e<=0)return'neutral';if(r)return e>timeLimitMs?'status-over':'neutral';return e<=timeLimitMs?'status-ok':'status-over';}
 
 function renderPersons(){
@@ -376,6 +397,10 @@ function startTimer(name){
   if(!timers[name])timers[name]={running:false,startTime:null,elapsed:0,interval:null};
   const t=timers[name];if(t.running)return;
   t.startTime=Date.now()-t.elapsed;t.running=true;
+  // Sla de startTime op zodat een page refresh de timer niet reset
+  const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
+  saved[name]=t.startTime;
+  localStorage.setItem('rl_running_timers',JSON.stringify(saved));
   t.interval=setInterval(()=>{
     t.elapsed=Date.now()-t.startTime;
     const el=document.getElementById('disp-'+esc(name));if(el)el.textContent=fmt(t.elapsed);
@@ -388,6 +413,10 @@ async function stopTimer(name){
   const t=timers[name];if(!t||!t.running)return;
   clearInterval(t.interval);t.running=false;
   t.elapsed=Date.now()-t.startTime;
+  // Verwijder uit de persistente lijst nu de timer gestopt is
+  const saved=JSON.parse(localStorage.getItem('rl_running_timers')||'{}');
+  delete saved[name];
+  localStorage.setItem('rl_running_timers',JSON.stringify(saved));
   const now=new Date(),cfg=TABLET_CONFIG[tabletId];
   laps.unshift({name,ms:t.elapsed,time:fmt(t.elapsed),
     date:now.toLocaleDateString('nl-NL'),
