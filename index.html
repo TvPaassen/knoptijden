@@ -667,6 +667,7 @@ function selectTablet(id){
 }
 
 // ==================== BELANGRIJKE FUNCTIES ====================
+// ==================== CORE FUNCTIES (laatste versie) ====================
 
 async function confirmTablet(){
   const id = window._pendingTablet;
@@ -682,10 +683,7 @@ async function confirmTablet(){
   }
   if (pwd !== 'admin123') {
     err.textContent = 'Verkeerd wachtwoord! Probeer: admin123';
-    if (pwdInput) {
-      pwdInput.value = '';
-      pwdInput.focus();
-    }
+    if (pwdInput) { pwdInput.value = ''; pwdInput.focus(); }
     return;
   }
 
@@ -696,7 +694,7 @@ async function confirmTablet(){
   try {
     await set(ref(db, 'rl_tablets/' + id), deviceId);
   } catch(e) {
-    console.warn('Firebase error (offline ok):', e);
+    console.warn('Firebase error (offline is ok):', e);
   }
 
   tabletId = id;
@@ -705,7 +703,7 @@ async function confirmTablet(){
   localStorage.setItem('rl_device_id', deviceId);
 
   console.log('🎉 Tablet succesvol geactiveerd:', id);
-  initApp();
+  initApp();   // Dit moet nu werken
 }
 
 function cancelTabletConfirm(){
@@ -714,18 +712,7 @@ function cancelTabletConfirm(){
   document.getElementById('setup-choice').style.display = 'block';
 }
 
-async function initApp(){
-  showScreen('screen-timer');
-  const cfg=TABLET_CONFIG[tabletId];
-  document.getElementById('timer-title').textContent=cfg.label;
-  document.getElementById('timer-sub').textContent='Tijdslimiet: '+cfg.limitMin+' minuten · '+new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
-  await loadFromStorage();
-  if(!names.length)names=['Medewerker 1','Medewerker 2','Medewerker 3'];
-  initTimers();renderPersons();renderLaps();
-  startFirebaseListeners();
-}
-
-// ==================== ALLE FUNCTIES GLOBAAL MAKEN ====================
+// ==================== ALLE WINDOW EXPOSES (belangrijk!) ====================
 window.selectTablet = selectTablet;
 window.confirmTablet = confirmTablet;
 window.cancelTabletConfirm = cancelTabletConfirm;
@@ -742,9 +729,9 @@ window.clearAllLaps = clearAllLaps;
 window.resetTablet = resetTablet;
 window.startTimer = startTimer;
 window.stopTimer = stopTimer;
-window.initApp = initApp;           // ← belangrijk!
+window.initApp = initApp;
 
-console.log('✅ Alle functies geëxposeerd!');
+console.log('✅ Alle kritieke functies geëxposeerd voor module');
   
 </script>
 </body>
